@@ -52,7 +52,7 @@
           >{{animationTxt}}</span>
           <span>{{Number(currentCOCOS).toFixed(4)}}</span>
         </div>
-        <el-button v-if="account.name" @click="doAction" class="btn-action">{{actionTxt}}</el-button>
+        <el-button v-if="account.account_name" @click="doAction" class="btn-action">{{actionTxt}}</el-button>
         <!-- <button
           v-else
           @click="login"
@@ -136,7 +136,7 @@ export default {
         if (!connected) return false;
         const cocos = Cocosjs.cocos;
         bcx = cocos.cocosBcx(bcx)
-        this.account.name = cocos.identity.accounts
+        this.account.account_name = cocos.identity.accounts
         this.getCOCOS();
 
         return true
@@ -171,7 +171,7 @@ export default {
   },
   methods: {
     getCOCOS() {
-      if (!this.account.name) {
+      if (!this.account.account_name) {
         this.currentCOCOS = 0;
         return;
       }
@@ -179,13 +179,19 @@ export default {
       var self = this;
       bcx.queryAccountBalances({
         assetId_or_symbol: "COCOS",
-        account: self.account.name,
-        callback: function(res) {
-          console.info(res);
-          console.info(res.data.COCOS);
+        account: self.account.account_name,
+        // callback: function(res) {
+        //   console.info("queryAccountBalances--web"+JSON.stringify(res));
+        //   console.info(res.data.COCOS);
+        //   self.currentCOCOS = res.data.COCOS;
+        // }
+      }).then((res) => {
+         console.info("queryAccountBalances--web"+JSON.stringify(res));
           self.currentCOCOS = res.data.COCOS;
-        }
-      });
+       })
+      .catch(e => {
+        this.$message.warning(e.message);
+      });;
     },
 
     getPool() {
@@ -232,7 +238,7 @@ export default {
         Math.random() * Math.floor(Number.MAX_SAFE_INTEGER)
       );
       return createHash("sha1")
-        .update(this.account.name + Date.now() + randomNumber)
+        .update(this.account.account_name + Date.now() + randomNumber)
         .digest("hex");
     },
 
@@ -261,7 +267,7 @@ export default {
       // }
       const body = new FormData();
       const options = {
-        authorization: `${this.account.name}@${this.account.authority}`,
+        authorization: `${this.account.account_name}@${this.account.authority}`,
         broadcast: true,
         sign: true
       };
@@ -292,7 +298,7 @@ export default {
       //   body
       // }).then(({ expiration_timestamp, seed, signature }) => {
       //   COCOS.transfer({
-      //     from: this.account.name,
+      //     from: this.account.account_name,
       //     to: 'fairdicegame',
       //     quantity: Number(this.cocos).toFixed(4) + ' COCOS',
       //     memo: `${this.rollUnder}-${seed}-${this.getClientSeed()}-${expiration_timestamp}-${referrer}-${signature}`
@@ -363,32 +369,42 @@ export default {
 
     login() {
       // pc wallet Transfer test
-      Cocosjs.plugins( new CocosBCX() );
-      Cocosjs.cocos.connect('My-App').then(connected => {
-        if(!connected) return false;
+      // Cocosjs.plugins( new CocosBCX() );
+      // Cocosjs.cocos.connect('My-App').then(connected => {
+      //   if(!connected) return false;
 
-        const cocos = Cocosjs.cocos;
-        console.log(cocos)
-        let cocosBcx = cocos.cocosBcx(bcx)
-        let result = cocosBcx.transferAsset({
-          type: "signature",
-          payload: {
-            toAccount: "cocos000",
-            amount: "0.2",
-            memo: "",
-            assetId: "COCOS"
-          }
-        });
-      });
+      //   const cocos = Cocosjs.cocos;
+      //   console.log(cocos)
+      //   let cocosBcx = cocos.cocosBcx(bcx)
+      //   let result = cocosBcx.transferAsset({
+      //     type: "signature",
+      //     payload: {
+      //       toAccount: "cocos000",
+      //       amount: "0.2",
+      //       memo: "",
+      //       assetId: "COCOS"
+      //     }
+      //   });
+      // });
 
       // chrome extension test
-      // var self = this;
-      // if (window.BcxWeb && window.BcxWeb.BCX) {
-      //   bcx = window.BcxWeb.BCX;
-      //   self.account.name = window.BcxWeb.address;
-      //   self.getCOCOS();
-      //   return true;
-      // }
+      var self = this;
+      if (window.BcxWeb) {
+        bcx = window.BcxWeb;
+       bcx.getAccountInfo().then((res) => {
+           const account = res ;
+           self.account.account_name =res.account_name;
+      //  const account = BcxWeb.identity.accounts.find(account => account.blockchain === 'eos');
+       // if (!account) return;
+    //    this.$store.commit('UPDATE_ACCOUNT', account);
+     console.info("login res",res)
+      self.getCOCOS();
+      })
+      .catch(e => {
+        this.$message.warning(e.message);
+      });
+        return true;
+      }
 
       // bcx.passwordLogin({
       //   account: self.gel("#login_username").value,
@@ -397,7 +413,7 @@ export default {
       //     if (res.code == 1) {
       //       var username = self.gel("#login_username").value;
       //       self.$store.commit("UPDATE_ACCOUNT", { name: res.account_name });
-      //       self.account.name = username;
+      //       self.account.account_name = username;
       //       self.getCOCOS();
       //       self.showLogin = false;
       //       self.$message({
